@@ -28,21 +28,6 @@
 		/delete-property/ bootargs;
 	};
 
-	/*
-	 * HDMI DDC over bitbanged GPIO. The dw-hdmi hardware DDC path on the
-	 * hdmim0_tx0 pins only produces "i2c read err!" on this board; drive
-	 * the same physical pins (GPIO4_B7=SCL, GPIO4_C0=SDA) with i2c-gpio.
-	 */
-	i2c_gpio_ddc: i2c-gpio-ddc {
-		compatible = "i2c-gpio";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		scl-gpios = <&gpio4 RK_PB7 GPIO_ACTIVE_HIGH>;
-		sda-gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
-		i2c-gpio,delay-us = <5>;
-		status = "okay";
-	};
-
 	/* System SRAM1 (1MB); first 512KB reserved for the rknpu driver. */
 	sram@fd600000 {
 		compatible = "mmio-sram";
@@ -186,6 +171,14 @@
 		rockchip,cpu = <&i2s5_8ch>;
 		rockchip,codec = <&hdmi0>;
 		rockchip,jack-det;
+		status = "okay";
+	};
+
+	pwm_fan: pwm-fan {
+		compatible = "pwm-fan";
+		pwms = <&pwm9 0 50000 0>;
+		#cooling-cells = <2>;
+		pulses-per-revolution = <2>;
 		status = "okay";
 	};
 };
@@ -539,6 +532,8 @@
 	supports-emmc;
 	non-removable;
 	mmc-hs200-1_8v;
+	vmmc-supply = <&vcc_3v3_s3>;
+	vqmmc-supply = <&vcc_1v8_s3>;
 	status = "okay";
 };
 
@@ -730,7 +725,6 @@
 &hdmi0 {
 	enable-gpios = <&gpio4 RK_PB1 GPIO_ACTIVE_HIGH>;
 
-	ddc-i2c-bus = <&i2c_gpio_ddc>;
 	pinctrl-0 = <&hdmim0_tx0_cec &hdmim0_tx0_hpd>;
 	status = "okay";
 };
@@ -1123,5 +1117,12 @@
 };
 
 &usbdp_phy1 {
+	status = "okay";
+};
+
+/* ===== PWM Fan Controller ===== */
+&pwm9 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm9m1_pins>;
 	status = "okay";
 };
