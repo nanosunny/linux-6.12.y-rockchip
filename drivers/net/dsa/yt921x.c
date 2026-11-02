@@ -4292,13 +4292,38 @@ yt921x_dsa_get_tag_protocol(struct dsa_switch *ds, int port,
 static int yt921x_dsa_port_setup(struct dsa_switch *ds, int port)
 {
 	struct yt921x_priv *priv = to_yt921x_priv(ds);
+	struct dsa_port *dp = dsa_to_port(ds, port);
+	struct net_device *conduit;
+	const netdev_features_t mask = NETIF_F_ALL_TSO |
+		NETIF_F_GSO_UDP_L4 | NETIF_F_CSUM_MASK;
 	int res;
 
 	mutex_lock(&priv->reg_lock);
 	res = yt921x_port_setup(priv, port);
 	mutex_unlock(&priv->reg_lock);
+	if (res || !dsa_port_is_cpu(dp))
+		return res;
 
-	return res;
+	conduit = dp->conduit;
+
+	/* The YT921X tag is inserted between the Ethernet header and the
+	 * protocol payload.  A conduit MAC cannot account for that private
+	 * header when doing TSO or TX checksum offload, so keep software GSO
+	 * enabled but do not advertise those hardware offloads.
+	 */
+	conduit->hw_features &= ~mask;
+	conduit->features &= ~mask;
+	conduit->wanted_features &= ~mask;
+	conduit->vlan_features &= ~mask;
+
+	/* stmmac also keeps a private TSO state which is updated by its
+	 * ndo_fix_features() method.  Reconcile it before the conduit is opened.
+	 */
+	rtnl_lock();
+	netdev_update_features(conduit);
+	rtnl_unlock();
+
+	return 0;
 }
 
 /* Not "port" - DSCP mapping is global */
