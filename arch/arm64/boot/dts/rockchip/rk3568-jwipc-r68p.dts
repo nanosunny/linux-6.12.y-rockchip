@@ -12,7 +12,7 @@
 	compatible = "jwipc,r68p", "rockchip,rk3568";
 
 	aliases {
-		ethernet0 = &gmac1;
+		ethernet0 = &gmac0;
 		mmc0 = &sdhci;
 		mmc1 = &sdmmc0;
 		mmc2 = &sdmmc2;
